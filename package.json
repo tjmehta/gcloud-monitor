@@ -1,0 +1,61 @@
+{
+  "name": "gcloud-monitor",
+  "version": "0.0.0",
+  "description": "Custom Google Cloud monitoring v3 client",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha test",
+    "test-cov": "istanbul cover _mocha ./test && istanbul --text check-coverage --statements 100 --functions 100 --branches 100 --lines 100",
+    "test-watch": "nodemon -x mocha ./test",
+    "lint": "standard"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tjmehta/gcloud-monitor.git"
+  },
+  "keywords": [
+    "google",
+    "cloud",
+    "stackdriver",
+    "monitoring",
+    "custom",
+    "v3",
+    "monitor",
+    "client",
+    "api",
+    "gcloud",
+    "metrics",
+    "timeseries",
+    "gauge",
+    "cumulative",
+    "promise",
+    "promises"
+  ],
+  "author": "Tejesh Mehta",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/tjmehta/gcloud-monitor/issues"
+  },
+  "homepage": "https://github.com/tjmehta/gcloud-monitor#readme",
+  "dependencies": {
+    "101": "^1.6.2",
+    "cast-array": "^1.0.1",
+    "googleapis": "^14.2.0"
+  },
+  "devDependencies": {
+    "chai": "^3.5.0",
+    "istanbul": "^0.4.5",
+    "mocha": "^3.2.0",
+    "proxyquire": "^1.7.10",
+    "sinon": "^1.17.6",
+    "sinon-as-promised": "^4.0.2"
+  },
+  "standard": {
+    "globals": [
+      "afterEach",
+      "beforeEach",
+      "describe",
+      "it"
+    ]
+  }
+}
