@@ -40,7 +40,7 @@ describe('metric', function () {
       }],
       metricDomain: 'metricDomain',
       unit: 'unit',
-      valueType: 'INT64'
+      valueType: 'BOOLEAN'
     }
     this.metricKind = 'GAUGE'
     this.metricType = 'metricType'
@@ -177,7 +177,7 @@ describe('metric', function () {
 
       it('should format a time series item', function () {
         this.params = undefined
-        this.value = 1
+        this.value = true
         const timeSeriesItem = this.metric.formatTimeSeriesItem(this.value, this.params)
         expect(timeSeriesItem).to.deep.equal({
           metric: {
@@ -190,7 +190,7 @@ describe('metric', function () {
           points: {
             interval: {},
             value: {
-              int64Value: this.value
+              booleanValue: this.value
             }
           }
         })
@@ -223,11 +223,54 @@ describe('metric', function () {
         })
       })
 
+      describe('default valueType', function () {
+        beforeEach(function () {
+          delete this.opts.valueType
+          this.metric = new Metric(this.monitor, this.metricKind, this.metricType, this.opts)
+        })
+
+        it('should report time series data (default valueType)', function () {
+          const self = this
+          this.res = {}
+          this.client.projects.timeSeries.create.yieldsAsync(null, this.res)
+          this.value = true
+          return this.metric.report(this.value).then(function (res) {
+            console.log('fjdksajfkl;das')
+            expect(res).to.equal(self.res)
+            const create = self.client.projects.timeSeries.create
+            sinon.assert.calledOnce(create)
+            sinon.assert.calledWith(create, {
+              auth: self.authClient,
+              name: self.projectName,
+              resource: {
+                timeSeries: [{
+                  metric: {
+                    type: self.metricName,
+                    labels: {}
+                  },
+                  resource: self.resource,
+                  metricKind: self.metricKind,
+                  valueType: 'INT64', // default
+                  points: {
+                    interval: {
+                      endTime: self.date
+                    },
+                    value: {
+                      int64Value: self.value
+                    }
+                  }
+                }]
+              }
+            })
+          })
+        })
+      })
+
       it('should report time series data', function () {
         const self = this
         this.res = {}
         this.client.projects.timeSeries.create.yieldsAsync(null, this.res)
-        this.value = 1
+        this.value = true
         return this.metric.report(this.value).then(function (res) {
           expect(res).to.equal(self.res)
           const create = self.client.projects.timeSeries.create
@@ -249,7 +292,7 @@ describe('metric', function () {
                     endTime: self.date
                   },
                   value: {
-                    int64Value: self.value
+                    booleanValue: self.value
                   }
                 }
               }]
@@ -262,7 +305,7 @@ describe('metric', function () {
         const self = this
         this.res = {}
         this.client.projects.timeSeries.create.yieldsAsync(null, this.res)
-        this.value = 1
+        this.value = true
         this.interval = {
           startTime: this.date,
           endTime: this.date
@@ -289,7 +332,7 @@ describe('metric', function () {
                     endTime: self.date
                   },
                   value: {
-                    int64Value: self.value
+                    booleanValue: self.value
                   }
                 }
               }]
@@ -302,7 +345,7 @@ describe('metric', function () {
         const self = this
         this.res = {}
         this.client.projects.timeSeries.create.yieldsAsync(null, this.res)
-        this.value = 1
+        this.value = true
         this.interval = {
           startTime: this.date,
           endTime: this.date
@@ -332,7 +375,7 @@ describe('metric', function () {
                     endTime: self.date
                   },
                   value: {
-                    int64Value: self.value
+                    booleanValue: self.value
                   }
                 }
               }]
