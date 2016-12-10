@@ -14,7 +14,14 @@ npm i --save gcloud-monitor
 ```js
 const monitor = require('gcloud-monitor')({
   project: '<google-cloud-project-name>',
-  auth: {/*auth-json*/} // optional, if using on GCE
+  resource: {
+    // optional, defaults to {type: 'global'}
+    // more info: https://cloud.google.com/monitoring/api/ref_v3/rest/v3/MonitoredResource
+  },
+  auth: {
+    // optional, if using on GCE
+    // more info: https://github.com/google/google-api-nodejs-client#authorizing-and-authenticating
+  }
 })
 
 /**
