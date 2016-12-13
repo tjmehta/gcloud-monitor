@@ -28,7 +28,9 @@ describe('metric', function () {
       getAuthClient: sinon.stub().resolves(this.authClient),
       getClient: sinon.stub().returns(this.client),
       getProject: sinon.stub().returns(this.project),
-      getResource: sinon.stub().returns(this.resource)
+      getResource: sinon.stub().returns(this.resource),
+      getDefaultThrottle: sinon.stub(),
+      on: sinon.stub()
     }
     this.opts = {
       description: 'description',
@@ -197,6 +199,12 @@ describe('metric', function () {
       })
     })
 
+    describe('clearTimers', function () {
+      it('should noop if there is no timer', function () {
+        this.metric.clearTimers()
+      })
+    })
+
     describe('report', function () {
       beforeEach(function () {
         this.date = new Date()
@@ -235,7 +243,6 @@ describe('metric', function () {
           this.client.projects.timeSeries.create.yieldsAsync(null, this.res)
           this.value = true
           return this.metric.report(this.value).then(function (res) {
-            console.log('fjdksajfkl;das')
             expect(res).to.equal(self.res)
             const create = self.client.projects.timeSeries.create
             sinon.assert.calledOnce(create)
@@ -263,6 +270,107 @@ describe('metric', function () {
               }
             })
           })
+        })
+      })
+
+      describe('throttle', function () {
+        beforeEach(function () {
+          this.clock = sinon.useFakeTimers()
+          this.date = new Date()
+          this.opts.throttle = 1000
+          this.metric = new Metric(this.monitor, this.metricKind, this.metricType, this.opts)
+        })
+        afterEach(function () {
+          this.clock.restore()
+        })
+
+        it('should report time series data immediately and after timeout', function () {
+          const self = this
+          this.res = {}
+          this.client.projects.timeSeries.create.yields(null, this.res)
+          this.value = true
+          const timePassed = true
+          // once
+          const promise1 = this.metric.report(this.value)
+          // twice
+          const promise2 = this.metric.report(this.value).then(function (res) {
+            expect(res).to.equal(self.res)
+            const create = self.client.projects.timeSeries.create
+            sinon.assert.calledTwice(create)
+            sinon.assert.calledWith(create, {
+              auth: self.authClient,
+              name: self.projectName,
+              resource: {
+                timeSeries: [{
+                  metric: {
+                    type: self.metricName,
+                    labels: {}
+                  },
+                  resource: self.resource,
+                  metricKind: self.metricKind,
+                  valueType: self.opts.valueType,
+                  points: {
+                    interval: {
+                      endTime: self.date
+                    },
+                    value: {
+                      booleanValue: self.value
+                    }
+                  }
+                }]
+              }
+            })
+          })
+          this.clock.tick(this.opts.throttle)
+          return Promise.all([promise1, promise2])
+        })
+
+        it('should report time series data immediately only', function () {
+          const self = this
+          this.res = {}
+          this.client.projects.timeSeries.create.yields(null, this.res)
+          this.value = true
+          const timePassed = true
+          // once
+          const promise1 = this.metric.report(this.value)
+
+          this.clock.tick(this.opts.throttle)
+          return promise1
+        })
+
+        describe('clearTimers', function () {
+          it('should cancel report', function () {
+            const self = this
+            this.res = {}
+            this.client.projects.timeSeries.create.yields(null, this.res)
+            this.value = true
+            const timePassed = true
+            // once
+            const promise1 = this.metric.report(this.value)
+            // twice
+            const promise2 = this.metric.report(this.value)
+            // clear timeout
+            this.metric.clearTimers()
+            // tick clock
+            this.clock.tick(this.opts.throttle)
+            return promise1.then(function (res) {
+              expect(res).to.equal(self.res)
+              sinon.assert.calledOnce(self.client.projects.timeSeries.create)
+            })
+          })
+        })
+
+        it('should report time series data immediately only', function () {
+          const self = this
+          this.res = {}
+          this.client.projects.timeSeries.create.yields(null, this.res)
+          this.value = true
+          const timePassed = true
+          // once
+          const promise1 = this.metric.report(this.value)
+
+          this.clock.tick(this.opts.throttle)
+          return promise1
         })
       })
 
