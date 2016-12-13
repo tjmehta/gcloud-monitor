@@ -21,7 +21,9 @@ const monitor = require('gcloud-monitor')({
   auth: {
     // optional, if using on GCE
     // more info: https://github.com/google/google-api-nodejs-client#authorizing-and-authenticating
-  }
+  },
+  // optional: default report throttle time
+  timeout: 1000
 })
 
 /**
@@ -29,6 +31,7 @@ const monitor = require('gcloud-monitor')({
  * more info: https://cloud.google.com/monitoring/api/ref_v3/rest/v3/projects.metricDescriptors#MetricDescriptor
  * @param  {String} metricType
  * @param  {Object} [opts] metric params
+ * @param  {Object} [opts.throttle] // report throttle time
  * @param  {Object} [opts.description]
  * @param  {Object} [opts.displayName]
  * @param  {Object} [opts.labels] label descriptors
@@ -147,6 +150,9 @@ cumulative.delete().then(function (data) {
   console.log('Response data', data)
 })
 ```
+
+#### Note about throttle
+Throttle can be set globally as `gcloud-monitor` `opt` or on each individual "metric" as a factory `opt`. This option throttle metric reports to the interval specified in ms.
 
 ## License
 MIT
