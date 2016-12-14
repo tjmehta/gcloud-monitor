@@ -42,7 +42,7 @@ describe('metric', function () {
       }],
       metricDomain: 'metricDomain',
       unit: 'unit',
-      valueType: 'BOOLEAN'
+      valueType: 'INT64'
     }
     this.metricKind = 'GAUGE'
     this.metricType = 'metricType'
@@ -179,7 +179,7 @@ describe('metric', function () {
 
       it('should format a time series item', function () {
         this.params = undefined
-        this.value = true
+        this.value = 1
         const timeSeriesItem = this.metric.formatTimeSeriesItem(this.value, this.params)
         expect(timeSeriesItem).to.deep.equal({
           metric: {
@@ -192,7 +192,7 @@ describe('metric', function () {
           points: {
             interval: {},
             value: {
-              booleanValue: this.value
+              int64Value: this.value
             }
           }
         })
@@ -241,7 +241,7 @@ describe('metric', function () {
           const self = this
           this.res = {}
           this.client.projects.timeSeries.create.yieldsAsync(null, this.res)
-          this.value = true
+          this.value = 1
           return this.metric.report(this.value).then(function (res) {
             expect(res).to.equal(self.res)
             const create = self.client.projects.timeSeries.create
@@ -288,7 +288,7 @@ describe('metric', function () {
           const self = this
           this.res = {}
           this.client.projects.timeSeries.create.yields(null, this.res)
-          this.value = true
+          this.value = 1
           const timePassed = true
           // once
           const promise1 = this.metric.report(this.value)
@@ -314,7 +314,7 @@ describe('metric', function () {
                       endTime: self.date
                     },
                     value: {
-                      booleanValue: self.value
+                      int64Value: self.value
                     }
                   }
                 }]
@@ -325,11 +325,157 @@ describe('metric', function () {
           return Promise.all([promise1, promise2])
         })
 
+        describe('update batch time series', function () {
+          describe('cumulative', function () {
+            beforeEach(function () {
+              this.metric._batchBufferUpdate = require('../lib/cumulative.js').prototype._batchBufferUpdate
+            })
+
+            it('should report time series data immediately and after timeout', function () {
+              const self = this
+              this.res = {}
+              this.client.projects.timeSeries.create.yields(null, this.res)
+              this.value = 1
+              const timePassed = true
+              // once
+              const promise1 = this.metric.report(this.value)
+              // twice
+              const promise2 = this.metric.report(this.value)
+              // thrice
+              const promise3 = this.metric.report(this.value).then(function (res) {
+                expect(res).to.equal(self.res)
+                const create = self.client.projects.timeSeries.create
+                sinon.assert.calledTwice(create)
+                expect(create.args[0][0]).to.deep.equal({
+                  auth: self.authClient,
+                  name: self.projectName,
+                  resource: {
+                    timeSeries: [{
+                      metric: {
+                        type: self.metricName,
+                        labels: {}
+                      },
+                      resource: self.resource,
+                      metricKind: self.metricKind,
+                      valueType: self.opts.valueType,
+                      points: {
+                        interval: {
+                          endTime: self.date
+                        },
+                        value: {
+                          int64Value: self.value
+                        }
+                      }
+                    }]
+                  }
+                })
+                expect(create.args[1][0]).to.deep.equal({
+                  auth: self.authClient,
+                  name: self.projectName,
+                  resource: {
+                    timeSeries: [{
+                      metric: {
+                        type: self.metricName,
+                        labels: {}
+                      },
+                      resource: self.resource,
+                      metricKind: self.metricKind,
+                      valueType: self.opts.valueType,
+                      points: {
+                        interval: {
+                          endTime: self.date
+                        },
+                        value: {
+                          int64Value: self.value + self.value
+                        }
+                      }
+                    }]
+                  }
+                })
+              })
+              this.clock.tick(this.opts.throttle)
+              return Promise.all([promise1, promise2, promise3])
+            })
+          })
+
+          describe('gauge', function () {
+            beforeEach(function () {
+              this.metric._batchBufferUpdate = require('../lib/gauge.js').prototype._batchBufferUpdate
+            })
+
+            it('should report time series data immediately and after timeout', function () {
+              const self = this
+              this.res = {}
+              this.client.projects.timeSeries.create.yields(null, this.res)
+              this.value = 1
+              const timePassed = true
+              // once
+              const promise1 = this.metric.report(this.value)
+              // twice
+              const promise2 = this.metric.report(this.value)
+              // thrice
+              const promise3 = this.metric.report(this.value).then(function (res) {
+                expect(res).to.equal(self.res)
+                const create = self.client.projects.timeSeries.create
+                sinon.assert.calledTwice(create)
+                expect(create.args[0][0]).to.deep.equal({
+                  auth: self.authClient,
+                  name: self.projectName,
+                  resource: {
+                    timeSeries: [{
+                      metric: {
+                        type: self.metricName,
+                        labels: {}
+                      },
+                      resource: self.resource,
+                      metricKind: self.metricKind,
+                      valueType: self.opts.valueType,
+                      points: {
+                        interval: {
+                          endTime: self.date
+                        },
+                        value: {
+                          int64Value: self.value
+                        }
+                      }
+                    }]
+                  }
+                })
+                expect(create.args[1][0]).to.deep.equal({
+                  auth: self.authClient,
+                  name: self.projectName,
+                  resource: {
+                    timeSeries: [{
+                      metric: {
+                        type: self.metricName,
+                        labels: {}
+                      },
+                      resource: self.resource,
+                      metricKind: self.metricKind,
+                      valueType: self.opts.valueType,
+                      points: {
+                        interval: {
+                          endTime: self.date
+                        },
+                        value: {
+                          int64Value: self.value
+                        }
+                      }
+                    }]
+                  }
+                })
+              })
+              this.clock.tick(this.opts.throttle)
+              return Promise.all([promise1, promise2, promise3])
+            })
+          })
+        })
+
         it('should report time series data immediately only', function () {
           const self = this
           this.res = {}
           this.client.projects.timeSeries.create.yields(null, this.res)
-          this.value = true
+          this.value = 1
           const timePassed = true
           // once
           const promise1 = this.metric.report(this.value)
@@ -343,7 +489,7 @@ describe('metric', function () {
             const self = this
             this.res = {}
             this.client.projects.timeSeries.create.yields(null, this.res)
-            this.value = true
+            this.value = 1
             const timePassed = true
             // once
             const promise1 = this.metric.report(this.value)
@@ -364,7 +510,7 @@ describe('metric', function () {
           const self = this
           this.res = {}
           this.client.projects.timeSeries.create.yields(null, this.res)
-          this.value = true
+          this.value = 1
           const timePassed = true
           // once
           const promise1 = this.metric.report(this.value)
@@ -378,7 +524,7 @@ describe('metric', function () {
         const self = this
         this.res = {}
         this.client.projects.timeSeries.create.yieldsAsync(null, this.res)
-        this.value = true
+        this.value = 1
         return this.metric.report(this.value).then(function (res) {
           expect(res).to.equal(self.res)
           const create = self.client.projects.timeSeries.create
@@ -400,7 +546,7 @@ describe('metric', function () {
                     endTime: self.date
                   },
                   value: {
-                    booleanValue: self.value
+                    int64Value: self.value
                   }
                 }
               }]
@@ -413,7 +559,7 @@ describe('metric', function () {
         const self = this
         this.res = {}
         this.client.projects.timeSeries.create.yieldsAsync(null, this.res)
-        this.value = true
+        this.value = 1
         this.interval = {
           startTime: this.date,
           endTime: this.date
@@ -440,7 +586,7 @@ describe('metric', function () {
                     endTime: self.date
                   },
                   value: {
-                    booleanValue: self.value
+                    int64Value: self.value
                   }
                 }
               }]
@@ -453,7 +599,7 @@ describe('metric', function () {
         const self = this
         this.res = {}
         this.client.projects.timeSeries.create.yieldsAsync(null, this.res)
-        this.value = true
+        this.value = 1
         this.interval = {
           startTime: this.date,
           endTime: this.date
@@ -483,7 +629,7 @@ describe('metric', function () {
                     endTime: self.date
                   },
                   value: {
-                    booleanValue: self.value
+                    int64Value: self.value
                   }
                 }
               }]

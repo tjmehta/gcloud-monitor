@@ -152,7 +152,7 @@ cumulative.delete().then(function (data) {
 ```
 
 #### Note about throttle
-Throttle can be set globally as `gcloud-monitor` `opt` or on each individual "metric" as a factory `opt`. This option throttle metric reports to the interval specified in ms.
+Throttle can be set globally as `gcloud-monitor` `opt` or on each individual "metric" as a factory `opt`. This option throttles metric reports to the interval specified in ms.
 
 ## License
 MIT
