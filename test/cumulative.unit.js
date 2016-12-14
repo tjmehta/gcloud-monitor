@@ -47,7 +47,9 @@ describe('cumulative', function () {
         getAuthClient: sinon.stub().resolves(this.authClient),
         getClient: sinon.stub().returns(this.client),
         getProject: sinon.stub().returns(this.project),
-        getResource: sinon.stub().returns(this.resource)
+        getResource: sinon.stub().returns(this.resource),
+        getDefaultThrottle: sinon.stub(),
+        on: sinon.stub()
       }
       this.opts = {
         description: 'description',
