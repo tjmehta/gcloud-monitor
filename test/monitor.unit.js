@@ -186,16 +186,40 @@ describe('monitor', function () {
         project: 'project',
         resource: {
           type: 'container'
-        }
+        },
+        throttle: 1000
       }
       this.monitor = new Monitor(this.opts)
       sinon.stub(this.monitor, 'getAuthClient').resolves(this.client)
+    })
+
+    describe('clearTimers', function () {
+      beforeEach(function () {
+        sinon.stub(this.monitor, 'emit')
+      })
+      afterEach(function () {
+        this.monitor.emit.restore()
+      })
+
+      it('should emit event', function () {
+        sinon.assert.notCalled(this.monitor.emit)
+        this.monitor.clearTimers()
+        sinon.assert.calledOnce(this.monitor.emit)
+        sinon.assert.calledWith(this.monitor.emit, 'clearTimers')
+      })
     })
 
     describe('getClient', function () {
       it('should get opts.client', function () {
         const client = this.monitor.getClient()
         expect(client).to.equal(this.client)
+      })
+    })
+
+    describe('getDefaultThrottle', function () {
+      it('should get opts.throttle', function () {
+        const throttle = this.monitor.getDefaultThrottle()
+        expect(throttle).to.equal(this.opts.throttle)
       })
     })
 
