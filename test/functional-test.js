@@ -182,7 +182,9 @@ describe('functional tests', function () {
         this.client.projects.metricDescriptors.create.yieldsAsync()
         this.client.projects.timeSeries.create.yieldsAsync()
         return this.monitor.createCumulative('fooCumu', {
-          groupBy: (timeSeriesItem) => (timeSeriesItem.metric.labels && timeSeriesItem.metric.labels.name),
+          groupBy: function (timeSeriesItem) {
+            return timeSeriesItem.metric.labels && timeSeriesItem.metric.labels.name
+          },
           displayName: 'Foo',
           unit: 'foos'
         }).then(function (cumulative) {
