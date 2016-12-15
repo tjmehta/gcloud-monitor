@@ -154,5 +154,7 @@ cumulative.delete().then(function (data) {
 #### Note about throttle
 Throttle can be set globally as `gcloud-monitor` `opt` or on each individual "metric" as a factory `opt`. This option throttles metric reports to the interval specified in ms.
 
+Cumulative time series metrics batching can be grouped by passing `opt.groupBy` function. For example, if you want to batch cumulative metric data grouped by label `name`: `groupBy: (timeSeriesItem) => (timeSeriesItem.metric.labels && timeSeriesItem.metric.labels.name)`
+
 ## License
 MIT
