@@ -6,7 +6,6 @@ require('sinon-as-promised')
 
 const Monitor = require('../lib/monitor.js')
 
-const CUSTOM_METRIC_DOMAIN = 'custom.googleapis.com'
 const MONITORING_SCOPES = [
   'https://www.googleapis.com/auth/cloud-platform',
   'https://www.googleapis.com/auth/monitoring',

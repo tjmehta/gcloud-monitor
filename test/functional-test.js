@@ -30,7 +30,7 @@ describe('functional tests', function () {
   afterEach(function () {
     google.monitoring.restore()
     google.auth.getApplicationDefault.restore()
-  })¡
+  })
 
   describe('gauge', function () {
     beforeEach(function () {

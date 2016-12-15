@@ -1,5 +1,4 @@
 const expect = require('chai').expect
-const proxyquire = require('proxyquire')
 const pick = require('101/pick')
 const put = require('101/put')
 const sinon = require('sinon')
@@ -295,7 +294,6 @@ describe('metric', function () {
               this.res = {}
               this.client.projects.timeSeries.create.yields(null, this.res)
               this.value = 1
-              const timePassed = true
               // once
               const promise1 = this.metric.report(this.value)
               // twice
@@ -344,7 +342,6 @@ describe('metric', function () {
               this.res = {}
               this.client.projects.timeSeries.create.yields(null, this.res)
               this.value = 1
-              const timePassed = true
               // once
               const promise1 = this.metric.report(this.value)
               // twice
@@ -385,11 +382,9 @@ describe('metric', function () {
         })
 
         it('should report time series data immediately only', function () {
-          const self = this
           this.res = {}
           this.client.projects.timeSeries.create.yields(null, this.res)
           this.value = 1
-          const timePassed = true
           // once
           const promise1 = this.metric.report(this.value)
 
@@ -403,11 +398,9 @@ describe('metric', function () {
           })
 
           it('should cancel report', function (done) {
-            const self = this
             this.res = {}
             this.client.projects.timeSeries.create.yields(null, this.res)
             this.value = 1
-            const timePassed = true
             // once
             const promise1 = this.metric.report(this.value)
             // twice
@@ -415,6 +408,13 @@ describe('metric', function () {
             // clear timeout
             this.metric.clearTimers()
             promise1
+              .catch(function (res) {
+                done(new Error('should not complete'))
+              })
+              .then(function (res) {
+                done(new Error('should not complete'))
+              })
+            promise2
               .catch(function (res) {
                 done(new Error('should not complete'))
               })
@@ -430,11 +430,9 @@ describe('metric', function () {
         })
 
         it('should report time series data immediately only', function () {
-          const self = this
           this.res = {}
           this.client.projects.timeSeries.create.yields(null, this.res)
           this.value = 1
-          const timePassed = true
           // once
           const promise1 = this.metric.report(this.value)
 
