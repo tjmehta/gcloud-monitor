@@ -108,6 +108,13 @@ describe('functional tests', function () {
 
       it('should create a gauge and report it (throttled, two intervals)', function () {
         const self = this
+        const dates = [
+          new Date('Mon Dec 1 1969 16:00:00 GMT-0800'),
+          new Date('Tue Dec 2 1969 16:00:00 GMT-0800'),
+          new Date('Wed Dec 3 1969 16:00:00 GMT-0800'),
+          new Date('Thu Dec 4 1969 16:00:00 GMT-0800'),
+          new Date('Fri Dec 5 1969 16:00:00 GMT-0800')
+        ]
         this.client.projects.metricDescriptors.create.yieldsAsync()
         this.client.projects.timeSeries.create.yieldsAsync()
         return this.monitor.createGauge('fooGauge', {
@@ -116,7 +123,7 @@ describe('functional tests', function () {
         }).then(function (gauge) {
           self.gauge = gauge
           const p = Promise.all([
-            gauge.report(1)
+            gauge.report(1, dates[0])
           ])
           // tick fake clock
           self.clock.tick(self.opts.throttle)
@@ -127,10 +134,10 @@ describe('functional tests', function () {
           sinon.assert.calledOnce(self.client.projects.timeSeries.create)
         }).then(function () {
           const p = Promise.all([
-            self.gauge.report(5),
-            self.gauge.report(6),
-            self.gauge.report(7),
-            self.gauge.report(8)
+            self.gauge.report(5, dates[1]),
+            self.gauge.report(6, dates[2]),
+            self.gauge.report(7, dates[3]),
+            self.gauge.report(8, dates[4])
           ])
           // tick fake clock
           self.clock.tick(self.opts.throttle)
@@ -138,7 +145,30 @@ describe('functional tests', function () {
           return p
         }).then(function () {
           sinon.assert.calledOnce(self.client.projects.metricDescriptors.create)
-          sinon.assert.callCount(self.client.projects.timeSeries.create, 2)
+          sinon.assert.calledTwice(self.client.projects.timeSeries.create)
+          sinon.assert.calledWith(self.client.projects.timeSeries.create, {
+            auth: self.authClient,
+            name: 'projects/project',
+            resource: {
+              timeSeries: [{
+                metric: {
+                  type: 'custom.googleapis.com/fooGauge',
+                  labels: {}
+                },
+                resource: self.opts.resource,
+                metricKind: 'GAUGE',
+                valueType: 'INT64',
+                points: {
+                  interval: {
+                    endTime: dates[4]
+                  },
+                  value: {
+                    int64Value: 8
+                  }
+                }
+              }]
+            }
+          })
         })
       })
     })
@@ -173,11 +203,11 @@ describe('functional tests', function () {
       it('should create a cumulative and report it (throttled, two intervals, two groups)', function () {
         const self = this
         const dates = [
-          new Date('Wed Dec 1 1969 16:00:00 GMT-0800'),
-          new Date('Wed Dec 2 1969 16:00:00 GMT-0800'),
+          new Date('Mon Dec 1 1969 16:00:00 GMT-0800'),
+          new Date('Tue Dec 2 1969 16:00:00 GMT-0800'),
           new Date('Wed Dec 3 1969 16:00:00 GMT-0800'),
-          new Date('Wed Dec 4 1969 16:00:00 GMT-0800'),
-          new Date('Wed Dec 5 1969 16:00:00 GMT-0800')
+          new Date('Thu Dec 4 1969 16:00:00 GMT-0800'),
+          new Date('Fri Dec 5 1969 16:00:00 GMT-0800')
         ]
         this.client.projects.metricDescriptors.create.yieldsAsync()
         this.client.projects.timeSeries.create.yieldsAsync()
