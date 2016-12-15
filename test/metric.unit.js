@@ -394,7 +394,7 @@ describe('metric', function () {
 
         describe('clearTimers', function () {
           beforeEach(function () {
-            this.metric._batchBufferPush = () => {}
+            this.metric._batchBufferPush = function () {}
           })
 
           it('should cancel report', function (done) {
