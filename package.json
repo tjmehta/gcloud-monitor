@@ -39,7 +39,6 @@
   "homepage": "https://github.com/tjmehta/gcloud-monitor#readme",
   "dependencies": {
     "101": "^1.6.2",
-    "cast-array": "^1.0.1",
     "googleapis": "^14.2.0",
     "rxjs": "^5.0.0-rc.5",
     "timeout-then": "^1.1.0"
