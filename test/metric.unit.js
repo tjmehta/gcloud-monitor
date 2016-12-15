@@ -284,47 +284,6 @@ describe('metric', function () {
           this.clock.restore()
         })
 
-        it('should report time series data immediately and after timeout', function () {
-          const self = this
-          this.res = {}
-          this.client.projects.timeSeries.create.yields(null, this.res)
-          this.value = 1
-          const timePassed = true
-          // once
-          const promise1 = this.metric.report(this.value)
-          // twice
-          const promise2 = this.metric.report(this.value).then(function (res) {
-            expect(res).to.equal(self.res)
-            const create = self.client.projects.timeSeries.create
-            sinon.assert.calledTwice(create)
-            sinon.assert.calledWith(create, {
-              auth: self.authClient,
-              name: self.projectName,
-              resource: {
-                timeSeries: [{
-                  metric: {
-                    type: self.metricName,
-                    labels: {}
-                  },
-                  resource: self.resource,
-                  metricKind: self.metricKind,
-                  valueType: self.opts.valueType,
-                  points: {
-                    interval: {
-                      endTime: self.date
-                    },
-                    value: {
-                      int64Value: self.value
-                    }
-                  }
-                }]
-              }
-            })
-          })
-          this.clock.tick(this.opts.throttle)
-          return Promise.all([promise1, promise2])
-        })
-
         describe('update batch time series', function () {
           describe('cumulative', function () {
             beforeEach(function () {
@@ -345,8 +304,8 @@ describe('metric', function () {
               const promise3 = this.metric.report(this.value).then(function (res) {
                 expect(res).to.equal(self.res)
                 const create = self.client.projects.timeSeries.create
-                sinon.assert.calledTwice(create)
-                expect(create.args[0][0]).to.deep.equal({
+                sinon.assert.calledOnce(create)
+                sinon.assert.calledWith(create, {
                   auth: self.authClient,
                   name: self.projectName,
                   resource: {
@@ -363,30 +322,7 @@ describe('metric', function () {
                           endTime: self.date
                         },
                         value: {
-                          int64Value: self.value
-                        }
-                      }
-                    }]
-                  }
-                })
-                expect(create.args[1][0]).to.deep.equal({
-                  auth: self.authClient,
-                  name: self.projectName,
-                  resource: {
-                    timeSeries: [{
-                      metric: {
-                        type: self.metricName,
-                        labels: {}
-                      },
-                      resource: self.resource,
-                      metricKind: self.metricKind,
-                      valueType: self.opts.valueType,
-                      points: {
-                        interval: {
-                          endTime: self.date
-                        },
-                        value: {
-                          int64Value: self.value + self.value
+                          int64Value: self.value + self.value + self.value
                         }
                       }
                     }]
@@ -417,31 +353,8 @@ describe('metric', function () {
               const promise3 = this.metric.report(this.value).then(function (res) {
                 expect(res).to.equal(self.res)
                 const create = self.client.projects.timeSeries.create
-                sinon.assert.calledTwice(create)
-                expect(create.args[0][0]).to.deep.equal({
-                  auth: self.authClient,
-                  name: self.projectName,
-                  resource: {
-                    timeSeries: [{
-                      metric: {
-                        type: self.metricName,
-                        labels: {}
-                      },
-                      resource: self.resource,
-                      metricKind: self.metricKind,
-                      valueType: self.opts.valueType,
-                      points: {
-                        interval: {
-                          endTime: self.date
-                        },
-                        value: {
-                          int64Value: self.value
-                        }
-                      }
-                    }]
-                  }
-                })
-                expect(create.args[1][0]).to.deep.equal({
+                sinon.assert.calledOnce(create)
+                sinon.assert.calledWith(create, {
                   auth: self.authClient,
                   name: self.projectName,
                   resource: {
@@ -485,7 +398,11 @@ describe('metric', function () {
         })
 
         describe('clearTimers', function () {
-          it('should cancel report', function () {
+          beforeEach(function () {
+            this.metric._batchBufferPush = () => {}
+          })
+
+          it('should cancel report', function (done) {
             const self = this
             this.res = {}
             this.client.projects.timeSeries.create.yields(null, this.res)
@@ -497,12 +414,18 @@ describe('metric', function () {
             const promise2 = this.metric.report(this.value)
             // clear timeout
             this.metric.clearTimers()
+            promise1
+              .catch(function (res) {
+                done(new Error('should not complete'))
+              })
+              .then(function (res) {
+                done(new Error('should not complete'))
+              })
             // tick clock
             this.clock.tick(this.opts.throttle)
-            return promise1.then(function (res) {
-              expect(res).to.equal(self.res)
-              sinon.assert.calledOnce(self.client.projects.timeSeries.create)
-            })
+            // this should call done
+            setTimeout(done, this.opts.throttle * 2)
+            this.clock.tick(this.opts.throttle * 2)
           })
         })
 
