@@ -82,100 +82,184 @@ describe('functional tests', function () {
         this.clock.restore()
       })
 
-      it('should create a gauge and report it (throttled)', function () {
-        const self = this
-        this.client.projects.metricDescriptors.create.yieldsAsync()
-        this.client.projects.timeSeries.create.yieldsAsync()
-        return this.monitor.createGauge('fooGauge', {
-          displayName: 'Foo',
-          unit: 'foos'
-        }).then(function (gauge) {
-          const p = Promise.all([
-            gauge.report(1),
-            gauge.report(2),
-            gauge.report(3),
-            gauge.report(4)
-          ])
-          // tick fake clock
-          self.clock.tick(self.opts.throttle)
-          // return report all promise
-          return p
-        }).then(function () {
-          sinon.assert.calledOnce(self.client.projects.metricDescriptors.create)
-          sinon.assert.calledOnce(self.client.projects.timeSeries.create)
+      describe('gauge', function () {
+        beforeEach(function () {
+          this.gaugeOpts = {
+            displayName: 'Foo',
+            unit: 'foos'
+          }
         })
-      })
 
-      it('should create a gauge and report it (throttled, two intervals)', function () {
-        const self = this
-        const dates = [
-          new Date('Mon Dec 1 1969 16:00:00 GMT-0800'),
-          new Date('Tue Dec 2 1969 16:00:00 GMT-0800'),
-          new Date('Wed Dec 3 1969 16:00:00 GMT-0800'),
-          new Date('Thu Dec 4 1969 16:00:00 GMT-0800'),
-          new Date('Fri Dec 5 1969 16:00:00 GMT-0800')
-        ]
-        this.client.projects.metricDescriptors.create.yieldsAsync()
-        this.client.projects.timeSeries.create.yieldsAsync()
-        return this.monitor.createGauge('fooGauge', {
-          displayName: 'Foo',
-          unit: 'foos'
-        }).then(function (gauge) {
-          self.gauge = gauge
-          const p = Promise.all([
-            gauge.report(1, dates[0])
-          ])
-          // tick fake clock
-          self.clock.tick(self.opts.throttle)
-          // return report all promise
-          return p
-        }).then(function () {
-          sinon.assert.calledOnce(self.client.projects.metricDescriptors.create)
-          sinon.assert.calledOnce(self.client.projects.timeSeries.create)
-        }).then(function () {
-          const p = Promise.all([
-            self.gauge.report(5, dates[1]),
-            self.gauge.report(6, dates[2]),
-            self.gauge.report(7, dates[3]),
-            self.gauge.report(8, dates[4])
-          ])
-          // tick fake clock
-          self.clock.tick(self.opts.throttle)
-          // return report all promise
-          return p
-        }).then(function () {
-          sinon.assert.calledOnce(self.client.projects.metricDescriptors.create)
-          sinon.assert.calledTwice(self.client.projects.timeSeries.create)
-          sinon.assert.calledWith(self.client.projects.timeSeries.create, {
-            auth: self.authClient,
-            name: 'projects/project',
-            resource: {
-              timeSeries: [{
-                metric: {
-                  type: 'custom.googleapis.com/fooGauge',
-                  labels: {}
-                },
-                resource: self.opts.resource,
-                metricKind: 'GAUGE',
-                valueType: 'INT64',
-                points: {
-                  interval: {
-                    endTime: dates[4]
-                  },
-                  value: {
-                    int64Value: 8
-                  }
-                }
-              }]
+        describe('groupBy', function () {
+          beforeEach(function () {
+            this.gaugeOpts.groupBy = function (timeSeriesItem) {
+              return timeSeriesItem.metric.labels.name
             }
+          })
+
+          it('should group gauges by group (name label)', function () {
+            const self = this
+            const dates = [
+              new Date('Mon Dec 1 1969 16:00:00 GMT-0800'),
+              new Date('Tue Dec 2 1969 16:00:00 GMT-0800'),
+              new Date('Wed Dec 3 1969 16:00:00 GMT-0800'),
+              new Date('Thu Dec 4 1969 16:00:00 GMT-0800')
+            ]
+            const values = [
+              100,
+              200,
+              101,
+              201
+            ]
+            this.client.projects.metricDescriptors.create.yieldsAsync()
+            this.client.projects.timeSeries.create.yieldsAsync()
+            return this.monitor.createGauge('fooGauge', this.gaugeOpts).then(function (gauge) {
+              const p = Promise.all([
+                gauge.report(values[0], dates[0], { name: 'foo' }),
+                gauge.report(values[1], dates[1], { name: 'foo' }),
+                gauge.report(values[2], dates[2], { name: 'bar' }),
+                gauge.report(values[3], dates[3], { name: 'bar' })
+              ])
+              // tick fake clock
+              self.clock.tick(self.opts.throttle)
+              // return report all promise
+              return p
+            }).then(function () {
+              sinon.assert.calledOnce(self.client.projects.metricDescriptors.create)
+              sinon.assert.calledOnce(self.client.projects.timeSeries.create)
+              sinon.assert.calledWith(self.client.projects.timeSeries.create, {
+                auth: self.authClient,
+                name: 'projects/project',
+                resource: {
+                  timeSeries: [{
+                    metric: {
+                      type: 'custom.googleapis.com/fooGauge',
+                      labels: { name: 'foo' }
+                    },
+                    resource: self.opts.resource,
+                    metricKind: 'GAUGE',
+                    valueType: 'INT64',
+                    points: {
+                      interval: {
+                        endTime: dates[1]
+                      },
+                      value: {
+                        int64Value: values[1]
+                      }
+                    }
+                  }, {
+                    metric: {
+                      type: 'custom.googleapis.com/fooGauge',
+                      labels: { name: 'bar' }
+                    },
+                    resource: self.opts.resource,
+                    metricKind: 'GAUGE',
+                    valueType: 'INT64',
+                    points: {
+                      interval: {
+                        endTime: dates[3]
+                      },
+                      value: {
+                        int64Value: values[3]
+                      }
+                    }
+                  }]
+                }
+              })
+            })
+          })
+        })
+
+        it('should create a gauge and report it (throttled)', function () {
+          const self = this
+          this.client.projects.metricDescriptors.create.yieldsAsync()
+          this.client.projects.timeSeries.create.yieldsAsync()
+          return this.monitor.createGauge('fooGauge', this.gaugeOpts).then(function (gauge) {
+            const p = Promise.all([
+              gauge.report(1),
+              gauge.report(2),
+              gauge.report(3),
+              gauge.report(4)
+            ])
+            // tick fake clock
+            self.clock.tick(self.opts.throttle)
+            // return report all promise
+            return p
+          }).then(function () {
+            sinon.assert.calledOnce(self.client.projects.metricDescriptors.create)
+            sinon.assert.calledOnce(self.client.projects.timeSeries.create)
+          })
+        })
+
+        it('should create a gauge and report it (throttled, two intervals)', function () {
+          const self = this
+          const dates = [
+            new Date('Mon Dec 1 1969 16:00:00 GMT-0800'),
+            new Date('Tue Dec 2 1969 16:00:00 GMT-0800'),
+            new Date('Wed Dec 3 1969 16:00:00 GMT-0800'),
+            new Date('Thu Dec 4 1969 16:00:00 GMT-0800'),
+            new Date('Fri Dec 5 1969 16:00:00 GMT-0800')
+          ]
+          this.client.projects.metricDescriptors.create.yieldsAsync()
+          this.client.projects.timeSeries.create.yieldsAsync()
+          return this.monitor.createGauge('fooGauge', this.gaugeOpts).then(function (gauge) {
+            self.gauge = gauge
+            const p = Promise.all([
+              gauge.report(1, dates[0])
+            ])
+            // tick fake clock
+            self.clock.tick(self.opts.throttle)
+            // return report all promise
+            return p
+          }).then(function () {
+            sinon.assert.calledOnce(self.client.projects.metricDescriptors.create)
+            sinon.assert.calledOnce(self.client.projects.timeSeries.create)
+          }).then(function () {
+            const p = Promise.all([
+              self.gauge.report(5, dates[1]),
+              self.gauge.report(6, dates[2]),
+              self.gauge.report(7, dates[3]),
+              self.gauge.report(8, dates[4])
+            ])
+            // tick fake clock
+            self.clock.tick(self.opts.throttle)
+            // return report all promise
+            return p
+          }).then(function () {
+            sinon.assert.calledOnce(self.client.projects.metricDescriptors.create)
+            sinon.assert.calledTwice(self.client.projects.timeSeries.create)
+            sinon.assert.calledWith(self.client.projects.timeSeries.create, {
+              auth: self.authClient,
+              name: 'projects/project',
+              resource: {
+                timeSeries: [{
+                  metric: {
+                    type: 'custom.googleapis.com/fooGauge',
+                    labels: {}
+                  },
+                  resource: self.opts.resource,
+                  metricKind: 'GAUGE',
+                  valueType: 'INT64',
+                  points: {
+                    interval: {
+                      endTime: dates[4]
+                    },
+                    value: {
+                      int64Value: 8
+                    }
+                  }
+                }]
+              }
+            })
           })
         })
       })
+
     })
   })
 
   describe('cumulative', function () {
-    describe('throttle', function () {
+    describe('groupBy', function () {
       beforeEach(function () {
         this.opts = {
           project: 'project',
@@ -195,6 +279,13 @@ describe('functional tests', function () {
         }
         this.clock = sinon.useFakeTimers()
         this.monitor = gmonitor(this.opts)
+        this.cumuOpts = {
+          groupBy: function (timeSeriesItem) {
+            return timeSeriesItem.metric.labels && timeSeriesItem.metric.labels.name
+          },
+          displayName: 'Foo',
+          unit: 'foos'
+        }
       })
       afterEach(function () {
         this.clock.restore()
@@ -211,13 +302,7 @@ describe('functional tests', function () {
         ]
         this.client.projects.metricDescriptors.create.yieldsAsync()
         this.client.projects.timeSeries.create.yieldsAsync()
-        return this.monitor.createCumulative('fooCumu', {
-          groupBy: function (timeSeriesItem) {
-            return timeSeriesItem.metric.labels && timeSeriesItem.metric.labels.name
-          },
-          displayName: 'Foo',
-          unit: 'foos'
-        }).then(function (cumulative) {
+        return this.monitor.createCumulative('fooCumu', this.cumuOpts).then(function (cumulative) {
           self.cumulative = cumulative
           const p = Promise.all([
             cumulative.report(1, dates[0], { name: 'one' })
