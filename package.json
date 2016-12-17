@@ -1,6 +1,6 @@
 {
   "name": "gcloud-monitor",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "description": "Custom Google Cloud monitoring v3 client",
   "main": "index.js",
   "scripts": {
